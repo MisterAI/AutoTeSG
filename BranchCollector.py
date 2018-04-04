@@ -9,9 +9,9 @@ def add_childs(node, branch_list, parents_list):
 	"""
 	for child_node in ast.iter_child_nodes(node):
 		if check_instance(child_node):
- 			tmp_list = parents_list[:]
-			tmp_list.append(child_node.__class__.__name__)
-			# tmp_list.append(child_node)
+			tmp_list = parents_list[:]
+			# tmp_list.append(child_node.__class__.__name__)
+			tmp_list.append(child_node)
 			branch_list.append(tmp_list)
 			add_childs(child_node, branch_list, tmp_list)
 
@@ -23,8 +23,7 @@ def check_instance(node):
 	if (isinstance(node, ast.If)
 		or isinstance(node, ast.For) 
 		or isinstance(node, ast.While)
-		or isinstance(node, ast.FunctionDef)
-		or isinstance(node, ast.Call)):
+		or isinstance(node, ast.FunctionDef)):
 		# relevant type
 		return True
 	else:
@@ -39,8 +38,8 @@ def collect_branches(ast_tree):
 	branch_list = []
 	for node in ast.iter_child_nodes(ast_tree):
 		if check_instance(node):
-			branch_list.append([node.__class__.__name__])
-			add_childs(node, branch_list, [node.__class__.__name__])
-			# branch_list.append([node])
-			# add_childs(node, branch_list, [node])
+			# branch_list.append([node.__class__.__name__])
+			# add_childs(node, branch_list, [node.__class__.__name__])
+			branch_list.append([node])
+			add_childs(node, branch_list, [node])
 	return branch_list
