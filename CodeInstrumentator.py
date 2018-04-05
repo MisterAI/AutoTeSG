@@ -1,22 +1,29 @@
 #!/usr/bin/python
 
 from ast import *
+import astor
 
 class RemovePrintStmts(NodeTransformer):
 	"""
 	Removes all print statements so they don't interfere 
 	with the instrumentation
 	"""
-	# TODO don't remove argument of print statement, as there might be function calls etc.
 	def visit_Print(self, node):
 		self.generic_visit(node)
-		return None
+		node = Expr(value=Tuple(elts=node.values, ctx=Load()))
+		fix_missing_locations(node)
+		return node
+		# return None
 
 	def visit_Expr(self, node):
 		self.generic_visit(node)
-		if hasattr(node.value.func, 'id'):
-			if node.value.func.id == 'print':
-				return None
+		if hasattr(node.value, 'func'):
+			if hasattr(node.value.func, 'id'):
+				if node.value.func.id == 'print':
+					new_expr = Expr(value=Tuple(elts=node.value.args, ctx=Load()))
+					node = new_expr
+					fix_missing_locations(node)
+					return node
 		return node
 
 class CodeInstrumentator(NodeTransformer):
