@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import sys
+import ast
+
 if sys.version_info[0] < 3:
 	from io import BytesIO
 else:
@@ -15,8 +17,9 @@ def getCodeOutput(codeTree):
 		my_output = sys.stdout = BytesIO()
 	else:
 		my_output = sys.stdout = StringIO()
-	
-	exec(compile(codeTree, filename="<ast>", mode="exec"))
+
+	compiled_code = compile(codeTree, filename="<ast>", mode="exec")
+	exec(compiled_code)
 	
 	# Restore sys stdout
 	sys.stdout = old_stdout
