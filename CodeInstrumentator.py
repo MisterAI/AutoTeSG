@@ -9,11 +9,10 @@ class RemovePrintStmts(NodeTransformer):
 	with the instrumentation
 	"""
 	def visit_Print(self, node):
-		self.generic_visit(node)
 		new_node = []
 		for i_node in node.values:
 			new_node.append(Expr(value=i_node, ctx=Load()))
-			fix_missing_locations(new_node[-1])
+			copy_location(new_node[-1], node)
 		return new_node
 
 	def visit_Expr(self, node):
@@ -24,7 +23,7 @@ class RemovePrintStmts(NodeTransformer):
 					new_node = []
 					for i_node in node.value.args:
 						new_node.append(Expr(value=i_node, ctx=Load()))
-						fix_missing_locations(new_node[-1])
+						copy_location(new_node[-1], node.value.func)
 					return new_node
 		return node
 
@@ -150,35 +149,48 @@ class CodeInstrumentator(NodeTransformer):
 
 	def get_print_stmt(self, lineno, node, else_branch):
 		if else_branch:
-			print_node = parse('print('+ str(lineno) + ',' + 'tmp' 
+			# else-branches get the inverse line number of the parent
+			print_node = parse('print('+ str(-lineno) + ',' + 'tmp' 
 				+ ')').body[0]
 			# invert distance for else branch
 			try:
+				# Python2
 				print_node.values[0].elts[1] = UnaryOp(
 					op=USub(), 
 					operand=self.calc_dist(node))
-			except Exception as e:
-				print('TODO!!!, CodeInstrumentator.py')
-				# raise e
+			except AttributeError as e:
+				# Python3
+				print_node.value.args[1] = UnaryOp(
+					op=USub(), 
+					operand=self.calc_dist(node))
+			
 			return print_node
 		else:
 			print_node = parse('print(' + str(lineno) + ',' + 'tmp' + ')').body[0]
 			try:
+				# Python2
 				print_node.values[0].elts[1] = self.calc_dist(node)
-			except Exception as e:
-				print('TODO!!!, CodeInstrumentator.py')
-				# raise e
+			except AttributeError as e:
+				print_node.value.args[1] = self.calc_dist(node)
+			
 			return print_node
 
 	def insert_print(self, node):
 		node.body.insert(0, self.get_print_stmt(node.lineno, node, False))
-		fix_missing_locations(node.body[0])
-		if hasattr(node, 'orelse'):
-			if node.orelse:
-				node.orelse.insert(0, 
-					self.get_print_stmt(node.orelse[0].lineno - 1, node, True))
-				fix_missing_locations(node.orelse[0])
+		try:
+			copy_location(node.body[0], node.body[1])
+			print('copying from node.body[1]', 'lineno', node.body[1].lineno, dump(node.body[1]))
+		except IndexError as e:
+			fix_missing_locations(node)
 
+		if hasattr(node, 'orelse'):
+			node.orelse.insert(0, 
+				self.get_print_stmt(node.lineno, node, True))
+			try:
+				copy_location(node.orelse[0], node.orelse[1])
+			except IndexError as e:
+				fix_missing_locations(node)
+				
 	def visit_If(self, node):
 		self.insert_print(node)
 		self.generic_visit(node)
