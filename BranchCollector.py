@@ -33,7 +33,7 @@ def add_childs(node, branch_list, parents_list):
 			tmp_list = parents_list[:]
 			if not child_node in node.body:
 				# node is part of orelse list
-				tmp_list[-1] = node.orelse[0].lineno - 1
+				tmp_list[-1] = -node.lineno
 			tmp_list.append(child_node.lineno)
 			branch_list.append(tmp_list[:])
 
@@ -53,7 +53,7 @@ def add_childs(node, branch_list, parents_list):
 
 					if not skip_else_branch:
 						else_list = tmp_list[:]
-						else_list[-1] = child_node.orelse[0].lineno - 1
+						else_list[-1] = -child_node.lineno
 						branch_list.append(else_list[:])
 			add_childs(child_node, branch_list, tmp_list)
 
