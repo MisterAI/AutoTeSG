@@ -13,16 +13,16 @@ def break_check(node):
 	3: break found in a child node of the top-level for-loop as well as 
 	   inside the body of the top-level for-loop
 	"""
-	break_parent = 0
-	for child_node in ast.walk(node):
+	break_loc = 0
+	for child_node in ast.iter_child_nodes(node):
 		if isinstance(child_node, ast.Break):
 			if isinstance(node, ast.For):
-				break_parent = break_parent | 2
+				break_loc = break_loc | 2
 			else:
-				break_parent = break_parent | 1
+				break_loc = break_loc | 1
 		if not isinstance(child_node, ast.For):
-			break_parent = break_parent | break_check(child_node)
-	return break_parent
+			break_loc = break_loc | break_check(child_node)
+	return break_loc
 
 def add_childs(node, branch_list, parents_list):
 	"""
@@ -38,13 +38,15 @@ def add_childs(node, branch_list, parents_list):
 			branch_list.append(tmp_list[:])
 
 			if hasattr(child_node, 'orelse'):
-				if child_node.orelse:
-					# there is a non-empty else clause
+				if len(child_node.orelse) > 1:
+					# there is a non-empty else clause ,containing more than 
+					# our print statement for coverage and distance calculation
 					skip_else_branch = False
 					if isinstance(child_node, ast.For):
 						# check for existence of breaks in for-loop 
-						break_parent = break_check(child_node)
-						if not break_parent == 1:
+						break_loc = break_check(child_node)
+						print('BranchCollector, break_loc', break_loc, 'child_node', astor.dump_tree(child_node))
+						if not break_loc == 1:
 							# break found not only inside a child node of the 
 							# top-level for-loop
 							skip_else_branch = True
