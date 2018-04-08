@@ -32,7 +32,7 @@ class CodeInstrumentator(NodeTransformer):
 
 	def dist_Eq(self, left, right):
 		# distance = abs(left-right)
-		return Call(func=Name(id='abs'),
+		return Call(func=Name(id='abs', ctx=Load()),
 					args=[BinOp(
 						left=left,
 						op=Sub(),
@@ -45,7 +45,7 @@ class CodeInstrumentator(NodeTransformer):
 		# distance = -abs(left-right)
 		return UnaryOp(op=USub(),
 					operand=Call(
-						func=Name(id='abs'),
+						func=Name(id='abs', ctx=Load()),
 						args=[BinOp(left=left, op=Sub(), right=right)],
 						keywords=[],
 						starargs=None,
@@ -84,16 +84,17 @@ class CodeInstrumentator(NodeTransformer):
 
 	def dist_In(self, left, right):
 		# approximate distance by distance to nearest item in list
+		print('Instru, dist_In', dump(right))
 		return Call(
-			func=Name(id='min'),
+			func=Name(id='min', ctx=Load()),
 			args=[
 				ListComp(
-					elt=Call(func=Name(id='abs'),
-						args=[BinOp(left=left, op=Sub(), right=Name(id='item'))],
+					elt=Call(func=Name(id='abs', ctx=Load()),
+						args=[BinOp(left=left, op=Sub(), right=Name(id='item', ctx=Load()))],
 						keywords=[],
 						starargs=None,
 						kwargs=None),
-					generators=[comprehension(target=Name(id='item'), iter=right, ifs=[])])],
+					generators=[comprehension(target=Name(id='item', ctx=Store()), iter=right, ifs=[])])],
 			keywords=[],
 			starargs=None,
 			kwargs=None)
@@ -179,7 +180,6 @@ class CodeInstrumentator(NodeTransformer):
 		node.body.insert(0, self.get_print_stmt(node.lineno, node, False))
 		try:
 			copy_location(node.body[0], node.body[1])
-			print('copying from node.body[1]', 'lineno', node.body[1].lineno, dump(node.body[1]))
 		except IndexError as e:
 			fix_missing_locations(node)
 
