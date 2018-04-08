@@ -6,7 +6,8 @@ import copy
 import random
 import BranchCollector
 from CodeRunner import *
-from FitnessCalculator import FitnessCalculator
+from DistanceCalculator import DistanceCalculator
+from CustomExceptions import *
 
 class RemoveReturn(NodeTransformer):
 	def visit_Return(self, node):
@@ -17,17 +18,7 @@ class NodePrinter(NodeVisitor):
 	def generic_visit(self, node):
 		print(node)
 		for child_node in iter_child_nodes(node):
-			self.generic_visit(child_node)		
-
-class TerminationException(Exception):
-    def __init__(self, message, errors):
-        # Call the base class constructor with the parameters it needs
-        super(TerminationException, self).__init__(message, errors)
-
-class NoSolutionException(Exception):
-    def __init__(self, message, errors):
-        # Call the base class constructor with the parameters it needs
-        super(NoSolutionException, self).__init__(message, errors)
+			self.generic_visit(child_node)
 
 class AVM:
 	def prepare_func_node(self, func_node):
@@ -72,27 +63,27 @@ class AVM:
 
 	def exploratory_move(self, func_node, var_i):
 		"""
-		Determines the fitness if increasing and decreasing the variable var_i
-		and returns the direction which led to a better fitness value as well 
-		as the fitness value itself.
+		Determines the distance if increasing and decreasing the variable var_i
+		and returns the direction which led to a better distance value as well 
+		as the distance value itself.
 		direction =  1: increase
 		direction = -1: decrease
 		"""
 		self.input_assignmnt[var_i] = self.input_assignmnt[var_i] + 1
 		test_node = self.prepare_func_node(func_node)
-		incr_fitness = FitnessCalculator().calc_fitness(test_node, self.branch)
+		incr_distance = DistanceCalculator().calc_distance(test_node, self.branch)
 
 		self.input_assignmnt[var_i] = self.input_assignmnt[var_i] - 2
 		test_node = self.prepare_func_node(func_node)
-		decr_fitness = FitnessCalculator().calc_fitness(test_node, self.branch)
+		decr_distance = DistanceCalculator().calc_distance(test_node, self.branch)
 
-		return ((1, incr_fitness) if incr_fitness > decr_fitness 
-			else (-1, decr_fitness))
+		return ((1, incr_distance) if incr_distance < decr_distance 
+			else (-1, decr_distance))
 
-	def pattern_move(self, func_node, var_i, direction, fitness):
+	def pattern_move(self, func_node, var_i, direction, distance):
 		"""
 		Increases the value of variable var_i with doubling step size until 
-		there's no more increase in fitness.
+		there's no more increase in distance.
 		"""
 		step_size = direction
 		if 1 == direction:
@@ -101,48 +92,66 @@ class AVM:
 		while True:
 			step_size *= 2
 			self.input_assignmnt[var_i] = self.input_assignmnt[var_i] + step_size
+			# print('Pattern move: variable is '
+			# 	+ str(var_i)
+			# 	 + ', step_size is ' 
+			# 	+ str(step_size) 
+			# 	+ ', input is '
+			# 	+ str(self.input_assignmnt))
 			test_node = self.prepare_func_node(func_node)
-			new_fitness = FitnessCalculator().calc_fitness(test_node, self.branch)
-			if new_fitness > fitness:
-				fitness = new_fitness
+			new_distance = DistanceCalculator().calc_distance(test_node, self.branch)
+			if new_distance < distance:
+				# print('Pattern move: improved by ' + str(distance - new_distance))
+				distance = new_distance
 			else:
 				self.input_assignmnt[var_i] = (self.input_assignmnt[var_i] 
 					- step_size)
-				return fitness
+				return distance
 
 	def AVMsearch(self, func_node, branch, input_tuples):
 		# get the number of input variables
-		self.num_in_vars = len(node.args.args)
+		self.num_in_vars = len(func_node.args.args)
 		self.input_tuples = input_tuples
 		self.branch = branch
 		self.input_assignmnt = None
 
 		self.initialise_input_vars()
 
-		old_fitness = 0
+		old_distance = 0
 		non_improvements = 0
 		restarts = 0
 
 		try:
 			while True:
 				for var_i in range(0, self.num_in_vars):
-					direction, fitness = self.exploratory_move(func_node, var_i)
-					new_fitness = pattern_move(func_node, var_i, direction, fitness)
-					if not new_fitness > old_fitness:
+					# print('Optimising distance for variable number ' + str(var_i))
+					direction, distance = self.exploratory_move(func_node, var_i)
+					# print('Finished exploration move with distance ' + str(distance))
+					new_distance = self.pattern_move(func_node, var_i, direction, distance)
+					# print('Finished pattern move with distance ' + str(new_distance))
+					if not new_distance < old_distance:
 						non_improvements += 1
 					else:
-						old_fitness = new_fitness
+						# print('Improvement is ' 
+						# 	+ str(old_distance-new_distance))
+						old_distance = new_distance
 					if non_improvements > self.num_in_vars:
 						if not restarts >= 3:
-							restarts += 3
+							# print('Restarting AVM search')
+							restarts += 1
 							self.initialise_input_vars(rand=True)
 							break
+						else:
+							raise NoSolutionException('Tried to restart for three times', None)
 
 		except TerminationException:
-			pass
-		except NoSolutionException:
-			# handle this
-			pass
+			print(str(branch) + ': ' + str(self.input_assignmnt))
+			# print('Got TerminationException!\n')
+		except NoSolutionException as e:
+			print(str(branch) + ': Search failed or branch unreachable')
+			# print('Didn\'t find any solution for branch ' + str(branch))
+			# TODO handle this better
+			# raise e
 
 
 class TestDataGenerator(NodeVisitor):
@@ -150,15 +159,27 @@ class TestDataGenerator(NodeVisitor):
 		"""
 		Visit all functions to generate test inputs.
 		"""
+		header_string = ('Generating data for function '
+			+ str(node.name) 
+			+ '\n\nBranch, Corresponding input values ')
+		variable_names = []
+		for in_param in node.args.args:
+			try:
+				variable_names.append(in_param.id)
+			except AttributeError as e:
+				variable_names.append(in_param.arg)
+		header_string += str(variable_names)
+		print(header_string)
+
 		# get all possible branches of function
 		branches = BranchCollector.collect_branches(node)
 		input_assignmnt = [0 for i in range(0, len(node.args.args))]
+		
 		# save successful inputs for every branching line as 
 		# Tupel:(lineno, input_list)
 		input_tuples = []
 		
 		for branch in branches:
-			AVM().AVMsearch(branch, input_tuples)
-
-			# DEBUG
-			break
+			# print('Searching covering input for branch ' + str(branch))
+			AVM().AVMsearch(node, branch, input_tuples)
+		print('\n')
