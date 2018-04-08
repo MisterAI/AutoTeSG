@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import ast
 import sys
 from CodeRunner import runCode
 from CustomExceptions import *
@@ -41,12 +40,7 @@ class DistanceCalculator():
 			code_output = [list(map(float, line.split(' '))) for line in code_output]
 		
 		# get the covered branches and their respective branch distance	
-		try:
-			covered_branches = [line[0] for line in code_output]
-		except SyntaxError as e:
-			print(code_output)
-			raise e
-		branch_distances = [line[1] for line in code_output]
+		covered_branches = [line[0] for line in code_output]
 
 		# print('covered_branches', covered_branches)
 

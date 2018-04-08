@@ -2,10 +2,7 @@
 
 import sys, getopt
 import astor
-import ast
-import BranchCollector
 from CodeInstrumentator import CodeInstrumentator, RemovePrintStmts
-from CodeRunner import *
 from TestDataGenerator import TestDataGenerator
 
 __version__ = '0.0.1'

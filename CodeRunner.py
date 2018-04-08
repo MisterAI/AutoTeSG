@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import sys
-import ast
 import astor
 
 if sys.version_info[0] < 3:
