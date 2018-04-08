@@ -3,6 +3,27 @@
 import astor
 import ast
 
+def break_check(node):
+	"""
+	Returns integer, telling if there was a break found in the tree.
+	It is encoded the following way:
+	0: no break found
+	1: break found only inside a child node of the top-level for-loop
+	2: break found only inside the body of the top-level for-loop
+	3: break found in a child node of the top-level for-loop as well as 
+	   inside the body of the top-level for-loop
+	"""
+	break_parent = 0
+	for child_node in ast.walk(node):
+		if isinstance(child_node, ast.Break):
+			if isinstance(node, ast.For):
+				break_parent = break_parent | 2
+			else:
+				break_parent = break_parent | 1
+		if not isinstance(child_node, ast.For):
+			break_parent = break_parent | break_check(child_node)
+	return break_parent
+
 def add_childs(node, branch_list, parents_list):
 	"""
 	Recursively adds the child_nodes
@@ -18,9 +39,20 @@ def add_childs(node, branch_list, parents_list):
 
 			if hasattr(child_node, 'orelse'):
 				if child_node.orelse:
-					else_list = tmp_list[:]
-					else_list[-1] = child_node.orelse[0].lineno - 1
- 					branch_list.append(else_list[:])
+					# there is a non-empty else clause
+					skip_else_branch = False
+					if isinstance(child_node, ast.For):
+						# check for existence of breaks in for-loop 
+						break_parent = break_check(child_node)
+						if not break_parent == 1:
+							# break found not only inside a child node of the 
+							# top-level for-loop
+							skip_else_branch = True
+
+					if not skip_else_branch:
+						else_list = tmp_list[:]
+						else_list[-1] = child_node.orelse[0].lineno - 1
+						branch_list.append(else_list[:])
 			add_childs(child_node, branch_list, tmp_list)
 
 def check_instance(node):
@@ -30,7 +62,6 @@ def check_instance(node):
 	if (isinstance(node, ast.If)
 		or isinstance(node, ast.For) 
 		or isinstance(node, ast.While)):
-		# or isinstance(node, ast.FunctionDef)):
 		# relevant type
 		return True
 	else:
@@ -43,11 +74,5 @@ def collect_branches(ast_tree):
 	of the branch as well as the predicate itself.
 	"""
 	branch_list = []
-	for node in ast.iter_child_nodes(ast_tree):
-		if check_instance(node):
-			branch_list.append([node.lineno])
-			if hasattr(node, 'orelse'):
-				if node.orelse:
- 					branch_list.append([node.orelse[0].lineno - 1])
-			add_childs(node, branch_list, [node.lineno])
+	add_childs(ast_tree, branch_list, [])
 	return branch_list
