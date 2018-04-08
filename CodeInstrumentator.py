@@ -140,20 +140,53 @@ class CodeInstrumentator(NodeTransformer):
 							)
 				return distance
 			else:
-				# no compare node; return 1 for now
-				# TODO consider simple integer variable
+				if isinstance(node.test, Name):
+					# distance = abs(test_var)
+					return Call(
+						func=Name(id='abs', ctx=Load()), 
+						args=[Name(id=node.test, ctx=Load())], 
+						keywords=[], 
+						starargs=None, 
+						kwargs=None)
+				# no known test; return 1 for now
 				return Num(n=1)
 		else:
 			if isinstance(node, For):
-				# distance equivalent to 'if(a in b)'
-				return self.dist_In(node.target, node.iter)
+				if isinstance(node.iter, Call):
+					if (node.iter.func.id == 'range' 
+						or node.iter.func.id == 'xrange'):
+						# distance = lower_limit - upper_limit
+						if len(node.iter.args) == 1:
+							return UnaryOp(
+								op=USub(), 
+								operand=node.iter.args[0])
+						if len(node.iter.args) >= 2:
+							return BinOp(
+								left=node.iter.args[0],
+								op=Sub(),
+								right=node.iter.args[1])
+				# the for-loop does not iterate over a range but a list, 
+				# tuple, ... -> therefore there is only one element missing 
+				# for the loop to execute if it doesn't execute
+				return Num(n=1)
 
 	def get_print_stmt(self, lineno, node, else_branch):
 		if else_branch:
 			# else-branches get the inverse line number of the parent
 			print_node = parse('print('+ str(-lineno) + ',' + 'tmp' 
 				+ ')').body[0]
-			# invert distance for else branch
+			try:
+				# Python2
+				print_node.values[0].elts[1] = self.calc_dist(node)
+			except AttributeError as e:
+				# Python3
+				print_node.value.args[1] = self.calc_dist(node)
+			
+			return print_node
+		else:
+			print_node = parse('print('+str(lineno)+','+'tmp'+')').body[0]
+			# invert distance for non-else branch 
+			# (distance will be used for corresponding else-branch)
 			try:
 				# Python2
 				print_node.values[0].elts[1] = UnaryOp(
@@ -164,15 +197,6 @@ class CodeInstrumentator(NodeTransformer):
 				print_node.value.args[1] = UnaryOp(
 					op=USub(), 
 					operand=self.calc_dist(node))
-			
-			return print_node
-		else:
-			print_node = parse('print(' + str(lineno) + ',' + 'tmp' + ')').body[0]
-			try:
-				# Python2
-				print_node.values[0].elts[1] = self.calc_dist(node)
-			except AttributeError as e:
-				print_node.value.args[1] = self.calc_dist(node)
 			
 			return print_node
 
