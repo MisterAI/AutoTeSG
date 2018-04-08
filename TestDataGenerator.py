@@ -11,9 +11,9 @@ class TestDataGenerator(NodeVisitor):
 		"""
 		Visit all functions to generate test inputs.
 		"""
-		header_string = ('Generating data for function '
+		header_string = ('Generating test data for function \''
 			+ str(node.name) 
-			+ '\n\nBranch, Corresponding input values ')
+			+ '\'\n\nBranch, Corresponding input values ')
 		variable_names = []
 		for in_param in node.args.args:
 			try:
