@@ -146,16 +146,3 @@ class AVM:
 			self.replace_negative_noms(func_node, branch)
 			print(str(branch) + ': Search failed or branch unreachable')
 			# print('Didn\'t find any solution for branch ' + str(branch))
-			# TODO handle this better
-			# raise e
-
-class RemoveReturn(NodeTransformer):
-	def visit_Return(self, node):
-		return parse('exit()').body[0]
-
-class NodePrinter(NodeVisitor):
-	"""Debug"""
-	def generic_visit(self, node):
-		print(node)
-		for child_node in iter_child_nodes(node):
-			self.generic_visit(child_node)
