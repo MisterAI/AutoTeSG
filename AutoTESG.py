@@ -37,6 +37,8 @@ def main(argv):
 		except Exception as e:
 			raise e
 
+		print('Analysing file ' + str(input_file))
+
 		RemovePrintStmts().visit(myAST)
 		CodeInstrumentator().visit(myAST)
 

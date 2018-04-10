@@ -21,7 +21,8 @@ class AVM:
 			kwargs=None))
 		for var in self.input_assignmnt:
 			new_node.body[-1].args.append(Num(n=var))
-		fix_missing_locations(new_node.body[-1])
+		copy_location(new_node.body[-1], full_tree.body[-1])
+		increment_lineno(new_node.body[-1])
 
 		return new_node
 
