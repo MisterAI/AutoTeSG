@@ -144,5 +144,5 @@ class AVM:
 			# print('Got TerminationException!\n')
 		except NoSolutionException as e:
 			self.replace_negative_noms(func_node, branch)
-			print(str(branch) + ': Search failed or branch unreachable')
+			print(str(branch) + ': -')
 			# print('Didn\'t find any solution for branch ' + str(branch))
