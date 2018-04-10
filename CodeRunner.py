@@ -2,11 +2,17 @@
 
 import sys
 import astor
+from ast import parse
 
 if sys.version_info[0] < 3:
 	from io import BytesIO
 else:
 	from io import StringIO
+
+def doRun(codeTree):
+	compiled_code = compile(astor.to_source(codeTree), filename="<ast>", 
+		mode="exec")
+	exec(compiled_code)
 
 def runCode(codeTree):
 	"""
@@ -25,9 +31,17 @@ def runCode(codeTree):
 	# source_file.write(instru_source)
 	# source_file.close()
 
-	compiled_code = compile(astor.to_source(codeTree), filename="<ast>", mode="exec")
-	exec(compiled_code)
-	
+	compiled_code = compile(astor.to_source(codeTree), filename="<ast>", 
+		mode="exec")
+	try:
+		# use the same dictionary for local and global variables to prevent 
+		# scope issues
+		dictionary = {}
+		exec(compiled_code, dictionary, dictionary)
+	except:
+		sys.stdout = old_stdout
+		raise
+
 	# Restore sys stdout
 	sys.stdout = old_stdout
 
