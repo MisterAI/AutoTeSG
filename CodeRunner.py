@@ -26,11 +26,6 @@ def runCode(codeTree):
 	else:
 		my_output = sys.stdout = StringIO()
 
-	# instru_source = astor.to_source(codeTree)
-	# source_file = open('test.py', 'w')
-	# source_file.write(instru_source)
-	# source_file.close()
-
 	compiled_code = compile(astor.to_source(codeTree), filename="<ast>", 
 		mode="exec")
 	try:
