@@ -84,17 +84,15 @@ class AVM:
 					- step_size)
 				return distance
 
-	def replace_negative_noms(self, func_node, branch):
+	def get_branch_string(self, func_node, branch):
 		"""
-		If the lineno is negative, the line is inside an else-block and we 
-		need to find the corresponding For/If/While-stmt.
+		If the lineno is negative, the line is inside an else-block. Return 
+		lineno appended by F accordingly.
 		"""
-		for i in range(0, len(branch)):
-				if branch[i] < 0:
-					for node in walk(func_node):
-						if hasattr(node, 'lineno'):
-							if -branch[i] == node.lineno:
-								branch[i] = node.orelse[0].lineno - 1
+		if branch[-1] < 0:
+			return str(-branch[-1]) + 'F: '
+		else:
+			return str(branch[-1]) + 'T: '
 
 	def AVMsearch(self, full_tree, func_node, branch, input_tuples):
 		# get the number of input variables
@@ -139,10 +137,10 @@ class AVM:
 								three times', None)
 
 		except TerminationException:
-			self.replace_negative_noms(func_node, branch)
-			print(str(branch) + ': ' + str(self.input_assignmnt))
+			branch_string = self.get_branch_string(func_node, branch)
+			print( branch_string + ', '.join(map(str, self.input_assignmnt)))
 			# print('Got TerminationException!\n')
 		except NoSolutionException as e:
-			self.replace_negative_noms(func_node, branch)
-			print(str(branch) + ': -')
+			branch_string = self.get_branch_string(func_node, branch)
+			print( branch_string + '-')
 			# print('Didn\'t find any solution for branch ' + str(branch))
