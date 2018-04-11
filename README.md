@@ -91,7 +91,9 @@ As the code may have run through a certain branch several times, the minimal bra
 
 Eventually these two metrics are combined according to the following formula.
 
-![equation](http://www.sciweavers.org/tex2img.php?eq=d%20%3D%20d_%7Bapproach%5C_lvl%7D%20%2B%201%20-%201.001%5E%7Bd_%7Bbranch%7D%7D&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0)
+![equation](http://www.sciweavers.org/tex2img.php?eq=d%20%3D%20d_%7Bapproach%5C_lvl%7D%20%2B%201%20-%201.001%5E%7Bd_%7Bbranch%7D%7D&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0)               
+
+
 
 ### CodeRunner.py
 This file is used to run the instrumented AST.
